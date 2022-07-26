@@ -62,15 +62,21 @@ class HelmTeleBot:
                 if line != "":
                     self.on_new_line(line)
 
-                # Detext if the log file has been refreshed
-                new_log_size = os.path.getsize(self.log_loc)
+                # Detect if the log file has been refreshed
+                try:
+                    new_log_size = os.path.getsize(self.log_loc)
+                except:
+                    new_log_size = 0
+                # print(new_log_size, self.cur_log_size)
                 if new_log_size < self.cur_log_size:
+                    logging.info("Detecting log file deletion")
+                    self.cur_log_size = new_log_size
                     self.spin_up()
                 else:
                     self.cur_log_size = new_log_size
                 time.sleep(1)
         except Exception as e:
-            print(e)
+            print("Error while running %s" % e)
 
     def on_new_line(self, line):
         offset = get_next_offset(line)

@@ -7,7 +7,7 @@ import subprocess
 import signal
 
 
-def testSerializingDeserializing():
+def testIntegrationBot():
     try:
         with open("./valheim_server.log", "w") as f:
             f.write("Serveur starting")
@@ -22,11 +22,11 @@ def testSerializingDeserializing():
         telegramMock = []
         bot.send_to_telegram = lambda x: telegramMock.append(x)
         # p = Popen(['sleep', '2', "&&", "echo", "02/21/2021 19:02:40: Got character ZDOID from Kvykv : 4072265675:3", ">>", "./valheim_server.log"])
-        command = 'sleep 1 && echo "02/21/2021 19:02:40: Got character ZDOID from Kvykv : 4072265675:3" >> ./valheim_server.log && echo "02/21/2021 19:05:40: Got character ZDOID from Kvykv : 0:0" >> ./valheim_server.log && echo "02/21/2021 19:10:40: Got character ZDOID from Kvykv : 4072265675:3" >> ./valheim_server.log'
+        command = 'sleep 1 && echo "02/21/2021 19:02:40: Got character ZDOID from Kvykv : 4072265675:3" >> ./valheim_server.log && echo "02/21/2021 19:05:40: Got character ZDOID from Kvykv : 0:0" >> ./valheim_server.log && sleep 5 && echo "02/21/2021 19:10:40: Got character ZDOID from Kvykv : 4072265675:3" >> ./valheim_server.log'
         ret = subprocess.run(command, capture_output=True, shell=True)
 
         signal.signal(signal.SIGALRM, handler)
-        signal.alarm(3)
+        signal.alarm(10)
 
         bot.run()
 
@@ -39,8 +39,11 @@ def testSerializingDeserializing():
     except AssertionError:
         return False
     finally:
-        os.remove("./valheim_server.log")
-        os.remove("./botstate.pickle")
+        try:
+            os.remove("./valheim_server.log")
+            os.remove("./botstate.pickle")
+        except:
+            pass
 
 
 def handler(signum, frame):
@@ -54,5 +57,5 @@ def assertEqual(a, b):
 
 
 if __name__ == "__main__":
-    testSerializingDeserializing()
+    testIntegrationBot()
     print("Done !")
