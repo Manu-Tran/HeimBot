@@ -25,10 +25,11 @@ def testSerializingDeserializing():
     finally:
         os.remove("test.pickle")
 
-def assertEqual(a,b):
+
+def assertEqual(a, b):
     if a != b:
-        print("Expect %s equals to %s but was not" % (a,b))
-    assert(a==b)
+        print("Expect %s equals to %s but was not" % (a, b))
+    assert a == b
 
 
 if __name__ == "__main__":

@@ -5,7 +5,8 @@ import logging
 import os.path
 from helper import verify_date
 
-logging.basicConfig(filename="/tmp/heimbot.log",level=logging.DEBUG)
+logging.basicConfig(filename="/tmp/heimbot.log", level=logging.DEBUG)
+
 
 class BotState:
     def __init__(self, file_path: str) -> None:
@@ -16,11 +17,11 @@ class BotState:
         self.load()
 
     def load(self) -> bool:
-        if not(os.path.exists(self.file_path)):
+        if not (os.path.exists(self.file_path)):
             logging.info("File %s not found for loading" % self.file_path)
             return False
         try:
-            with open(self.file_path, 'rb') as f:
+            with open(self.file_path, "rb") as f:
                 data = pickle.load(f)
             self.state["last_commit"] = data["last_commit"]
             for name in data["death_count"]:
@@ -30,16 +31,15 @@ class BotState:
             logging.error("Error while loading : %s" % e)
             return False
 
-
     def save(self) -> bool:
         try:
-            if (os.path.exists(self.file_path)):
+            if os.path.exists(self.file_path):
                 # Check if old_state is newer
                 old_state = BotState(self.file_path)
                 if old_state.get_last_commit() > self.state["last_commit"]:
                     logging.info("Could not save : commit date too young")
                     return False
-            with open(self.file_path, 'wb') as f:
+            with open(self.file_path, "wb") as f:
                 pickle.dump(self.state, f, protocol=pickle.HIGHEST_PROTOCOL)
                 return True
         except Exception as e:

@@ -8,11 +8,14 @@ import requests
 from botstate import BotState
 from helper import parse_line, get_next_offset
 
-logging.basicConfig(filename="/tmp/heimbot.log",level=logging.DEBUG)
+logging.basicConfig(filename="/tmp/heimbot.log", level=logging.DEBUG)
 
-class HelmTeleBot():
+
+class HelmTeleBot:
     # Interacts with telegram
-    def __init__(self, channel_id: str, data_dir: str, bot_token: str, host, serverLogFile: str) -> None:
+    def __init__(
+        self, channel_id: str, data_dir: str, bot_token: str, host, serverLogFile: str
+    ) -> None:
         self.channel_id = channel_id
         self.data_dir = data_dir
         self.host = host
@@ -23,12 +26,14 @@ class HelmTeleBot():
         self.cur_players = dict()
         self.spin_up()
 
-
     def send_to_telegram(self, text):
         logging.info("Sending " + text)
-        params = { "text" : text}
+        params = {"text": text}
         url = "https://api.telegram.org/bot"
-        r = requests.get(url+self.bot_token+"/sendMessage?chat_id="+self.channel_id, params=params)
+        r = requests.get(
+            url + self.bot_token + "/sendMessage?chat_id=" + self.channel_id,
+            params=params,
+        )
         logging.info(r.json())
 
     def spin_up(self):
@@ -36,7 +41,7 @@ class HelmTeleBot():
         elapsed = 0
         while self.logfile is None:
             try:
-                self.logfile = open(self.log_loc, 'r')
+                self.logfile = open(self.log_loc, "r")
             except:
                 time.sleep(1)
                 elapsed = elapsed + 1
@@ -54,7 +59,7 @@ class HelmTeleBot():
         try:
             while True:
                 line = self.logfile.readline()
-                if (line != ""):
+                if line != "":
                     self.on_new_line(line)
 
                 # Detext if the log file has been refreshed
@@ -84,12 +89,15 @@ class HelmTeleBot():
                     self.send_to_telegram(resp)
                 self.state.commit_last_read(offset)
 
+
 if __name__ == "__main__":
     logging.info("Starting telegram/valheim bridge....")
     data_dir = os.environ.get("VALHEIM_DIR_PATH", "")
-    bot = HelmTeleBot(os.environ['TELEGRAM_CHANNEL_ID'],
-                    data_dir,
-                    os.environ["TELEGRAM_BOT_TOKEN"],
-                      os.environ.get("VALHEIM_HOST", '127.0.0.1'),
-                      os.environ.get("VALHEIM_SERVER_LOG_PATH", "/log/valheim_server.log"))
+    bot = HelmTeleBot(
+        os.environ["TELEGRAM_CHANNEL_ID"],
+        data_dir,
+        os.environ["TELEGRAM_BOT_TOKEN"],
+        os.environ.get("VALHEIM_HOST", "127.0.0.1"),
+        os.environ.get("VALHEIM_SERVER_LOG_PATH", "/log/valheim_server.log"),
+    )
     bot.run()
