@@ -1,49 +1,37 @@
-import asyncio
-import re
+#!/usr/bin/env python3
+
 import time
 import os
-from mimir import parse_line
 import logging
 import requests
-from os.path import dirname
 
-
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler
+from botstate import BotState
+from helper import parse_line, get_next_offset
 
 logging.basicConfig(filename="/tmp/heimbot.log",level=logging.DEBUG)
-URL = "https://api.telegram.org/bot"
 
-class FacTeleBot():
+class HelmTeleBot():
     # Interacts with telegram
-    def __init__(self, channel_id, data_dir, bot_token, host):
+    def __init__(self, channel_id: str, data_dir: str, bot_token: str, host, serverLogFile: str) -> None:
         self.channel_id = channel_id
         self.data_dir = data_dir
         self.host = host
         self.bot_token = bot_token
+        self.log_loc = serverLogFile
+        self.state = BotState(data_dir + "/botstate.pickle")
+        self.cur_log_size = os.path.getsize(serverLogFile)
+        self.cur_players = dict()
+        self.spin_up()
+
 
     def send_to_telegram(self, text):
         logging.info("Sending " + text)
         params = { "text" : text}
-        #print(text)
-        r = requests.get(url=URL+self.bot_token+"/sendMessage?chat_id="+self.channel_id, params=params)
+        url = "https://api.telegram.org/bot"
+        r = requests.get(url+self.bot_token+"/sendMessage?chat_id="+self.channel_id, params=params)
         logging.info(r.json())
 
-
-class ValLogHandlerV2():
-    def __init__(self,fbot, logfile):
-        self.fbot = fbot
-        self.log_loc = logfile
-        self.logfile = None
-        self.players = dict()
-        self.last_line = ""
-        self.spin_up()
-
     def spin_up(self):
-        # When the bridge first starts up, wait for valheim to start and
-        # create the log file, then read to the end so we don't duplicate
-        # any messages
-
         self.logfile = None
         elapsed = 0
         while self.logfile is None:
@@ -55,41 +43,53 @@ class ValLogHandlerV2():
                 if elapsed > 20:
                     elapsed = 0
                     raise Exception("Timed out opening log file!")
-        self.fbot.send_to_telegram("HEIMBOT HAS ARRIVED !!!")
-
-        # read up to last line before EOF
+        # Skip to last offset
         for line in self.logfile:
-            pass
+            offset = get_next_offset(line)
+            last_commit = self.state.get_last_commit()
+            if offset and offset > last_commit:
+                pass
 
     def run(self):
-        while True:
-            line = self.logfile.readline()
-            if (line != ""):
-                self.on_modified(line)
-            time.sleep(1)
-         
-    def on_modified(self, line):
-        resp = parse_line(self.players, line)
-        if resp != "":
-            self.fbot.send_to_telegram(resp)
-        for line in self.logfile:
-            resp = parse_line(self.players, line)
+        try:
+            while True:
+                line = self.logfile.readline()
+                if (line != ""):
+                    self.on_new_line(line)
+
+                # Detext if the log file has been refreshed
+                new_log_size = os.path.getsize(self.log_loc)
+                if new_log_size < self.cur_log_size:
+                    self.spin_up()
+                else:
+                    self.cur_log_size = new_log_size
+                time.sleep(1)
+        except Exception as e:
+            print(e)
+
+    def on_new_line(self, line):
+        offset = get_next_offset(line)
+        last_commit = self.state.get_last_commit()
+        if offset > last_commit:
+            resp = parse_line(self.state, line, self.cur_players)
             if resp != "":
-                self.fbot.send_to_telegram(resp)
-
-    def default_handler(self, kind, name):
-        self.fbot.send_to_telegram(name)
-
-def regenerateBot():
-    data_dir = os.environ.get("VALHEIM_DIR_PATH", ".")
-    return HelmTeleBot(os.environ['TELEGRAM_CHANNEL_ID'],
-                    data_dir,
-                    os.environ["TELEGRAM_BOT_TOKEN"],
-                    os.environ.get("FACTORIO_HOST", '127.0.0.1'))
+                self.send_to_telegram(resp)
+            self.state.commit_last_read(offset)
+        for line in self.logfile:
+            offset = get_next_offset(line)
+            last_commit = self.state.get_last_commit()
+            if offset > last_commit:
+                resp = parse_line(self.state, line, self.cur_players)
+                if resp != "":
+                    self.send_to_telegram(resp)
+                self.state.commit_last_read(offset)
 
 if __name__ == "__main__":
     logging.info("Starting telegram/valheim bridge....")
     data_dir = os.environ.get("VALHEIM_DIR_PATH", "")
-    fb =  regenerateBot()
-    bot = ValLogHandlerV2(fb, data_dir+"/log/valheim_server.log")
+    bot = HelmTeleBot(os.environ['TELEGRAM_CHANNEL_ID'],
+                    data_dir,
+                    os.environ["TELEGRAM_BOT_TOKEN"],
+                      os.environ.get("VALHEIM_HOST", '127.0.0.1'),
+                      os.environ.get("VALHEIM_SERVER_LOG_PATH", "/log/valheim_server.log"))
     bot.run()
