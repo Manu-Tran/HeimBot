@@ -33,27 +33,28 @@ def parse_line(state, line: str, players) -> None:
     match = re.search(
         "Got\scharacter\sZDOID\sfrom\s([\w\d]{1,})\s:\s(-?\d{1,}:-?\d{1,})", line
     )
+    name = match.group(1)
     if match:
         if match.group(2) == "0:0":
-            death_count = state.inc_death_count(match.group(1))
-            players[match.group(1)] = [0, death_count]
+            death_count = state.inc_death_count(name)
+            players[name] = 0
             return str(
-                match.group(1)
+                name
                 + death_phrases[random.randint(0, len(death_phrases) - 1)]
                 + "\n(Death count: "
                 + str(death_count)
                 + ")"
             )
         else:
-            if match.group(1) in players:
-                if players[match.group(1)][0] == 0:
-                    players[match.group(1)] = [1, players[match.group(1)][1]]
+            if name in players:
+                if players[name] == 0:
+                    players[name] = 1
                     return ""
                 else:
-                    return str(match.group(1) + " HAS ARRIVED")
+                    return str(name + " HAS ARRIVED")
             else:
-                players[match.group(1)] = [1, 0]
-                return str(match.group(1) + " HAS ARRIVED")
+                players[name] = 1
+                return str(name + " HAS ARRIVED")
     else:
         match = re.search("Closing socket (.*)", line)
         if match and match.group(1) != "0":
