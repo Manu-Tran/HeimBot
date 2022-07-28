@@ -52,7 +52,7 @@ class HelmTeleBot:
         for line in self.logfile:
             offset = get_next_offset(line)
             last_commit = self.state.get_last_commit()
-            if offset and offset > last_commit:
+            if offset and offset < last_commit:
                 pass
 
     def run(self):
