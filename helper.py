@@ -29,15 +29,15 @@ death_phrases = [
 ]
 
 # Passe la structure players et la ligne de log à analyser
-def parse_line(state, line: str, players) -> None:
+def parse_line(state, line: str, isPlayerAlive) -> None:
     match = re.search(
         "Got\scharacter\sZDOID\sfrom\s([\w\d]{1,})\s:\s(-?\d{1,}:-?\d{1,})", line
     )
-    name = match.group(1)
     if match:
+        name = match.group(1)
         if match.group(2) == "0:0":
             death_count = state.inc_death_count(name)
-            players[name] = 0
+            isPlayerAlive[name] = False
             return str(
                 name
                 + death_phrases[random.randint(0, len(death_phrases) - 1)]
@@ -46,14 +46,14 @@ def parse_line(state, line: str, players) -> None:
                 + ")"
             )
         else:
-            if name in players:
-                if players[name] == 0:
-                    players[name] = 1
+            if name in isPlayerAlive:
+                if not(isPlayerAlive[name]):
+                    players[name] = True
                     return ""
                 else:
                     return str(name + " HAS ARRIVED")
             else:
-                players[name] = 1
+                players[name] = True
                 return str(name + " HAS ARRIVED")
     else:
         match = re.search("Closing socket (.*)", line)
